@@ -1,0 +1,18 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  
+  <!-- Icon -->
+  <g transform="translate(150, 90)">
+    <!-- Camera icon -->
+    <rect x="20" y="30" width="60" height="50" rx="8" fill="#D1D5DB"/>
+    <circle cx="50" cy="55" r="15" fill="#9CA3AF"/>
+    <rect x="35" y="20" width="30" height="10" rx="5" fill="#D1D5DB"/>
+    <circle cx="70" cy="40" r="3" fill="#9CA3AF"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="200" y="180" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#6B7280" text-anchor="middle" font-weight="500">
+    Sin imagen
+  </text>
+</svg>
