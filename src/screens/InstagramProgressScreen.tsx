@@ -2,7 +2,7 @@
 // Adaptada del mobile - Mock sin backend
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Link as LinkIcon, FileText, Video, BarChart3 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Link as LinkIcon, Video, BarChart3 } from 'lucide-react';
 import { BottomNavBar } from '../components/navigation/BottomNavBar';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
@@ -38,17 +38,6 @@ export function InstagramProgressScreen() {
   
   const [metricsStatus, setMetricsStatus] = useState<ProgressStatus>('pending');
   const [metricsUploaded, setMetricsUploaded] = useState(false);
-
-  const getStatusIcon = (status: ProgressStatus) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-      case 'rejected':
-        return <XCircle className="w-5 h-5 text-red-600" />;
-      default:
-        return <Clock className="w-5 h-5 text-gray-400" />;
-    }
-  };
 
   const getStatusBadge = (status: ProgressStatus) => {
     const styles = {
