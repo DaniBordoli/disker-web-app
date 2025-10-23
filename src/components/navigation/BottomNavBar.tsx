@@ -1,7 +1,7 @@
 // Componente BottomNavBar
 // Adaptado del mobile para web
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Compass, Megaphone, Sparkles, MessageCircle, User } from 'lucide-react';
+import { Megaphone, User } from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -15,30 +15,31 @@ export function BottomNavBar() {
   const location = useLocation();
 
   const navItems: NavItem[] = [
-    {
-      label: 'Explora',
-      icon: <Compass className="w-6 h-6" />,
-      path: '/',
-      isActive: location.pathname === '/',
-    },
+    // Temporalmente ocultas: Explora, Hera, Mensajes
+    // {
+    //   label: 'Explora',
+    //   icon: <Compass className="w-6 h-6" />,
+    //   path: '/',
+    //   isActive: location.pathname === '/',
+    // },
     {
       label: 'Campañas',
       icon: <Megaphone className="w-6 h-6" />,
       path: '/my-campaigns',
       isActive: location.pathname === '/my-campaigns',
     },
-    {
-      label: 'Hera',
-      icon: <Sparkles className="w-6 h-6" />,
-      path: '/hera',
-      isActive: location.pathname === '/hera',
-    },
-    {
-      label: 'Mensajes',
-      icon: <MessageCircle className="w-6 h-6" />,
-      path: '/messages',
-      isActive: location.pathname === '/messages',
-    },
+    // {
+    //   label: 'Hera',
+    //   icon: <Sparkles className="w-6 h-6" />,
+    //   path: '/hera',
+    //   isActive: location.pathname === '/hera',
+    // },
+    // {
+    //   label: 'Mensajes',
+    //   icon: <MessageCircle className="w-6 h-6" />,
+    //   path: '/messages',
+    //   isActive: location.pathname === '/messages',
+    // },
     {
       label: 'Perfil',
       icon: <User className="w-6 h-6" />,
