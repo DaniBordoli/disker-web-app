@@ -209,3 +209,86 @@ export interface CampaignDetailResponse {
     campaign: CampaignDetail;
   };
 }
+
+// Script Types
+export interface Script {
+  id: number;
+  title: string;
+  content: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateScriptRequest {
+  script: {
+    title: string;
+    content: string;
+  };
+}
+
+export interface CreateScriptResponse {
+  meta: ApiMeta;
+  data: {
+    script: Script;
+  };
+}
+
+// Campaign Post Types
+export type CampaignPostStatus = 
+  | 'cancelled'                    // 0 - Cancelado
+  | 'pending_publication'          // 1 - Pendiente de publicación
+  | 'published'                    // 2 - Publicado
+  | 'script_pending'               // 3 - Guión pendiente
+  | 'rejected'                     // 4 - Rechazado
+  | 'evaluating_script_client'     // 5 - Evaluando guión (cliente)
+  | 'evaluating_draft_client'      // 6 - Evaluando borrador (cliente)
+  | 'script_approved'              // 7 - Guión aprobado
+  | 'evaluating_script_agency'     // 8 - Evaluando guión (agencia)
+  | 'evaluating_draft_agency';     // 9 - Evaluando borrador (agencia)
+
+export type CampaignPostType =
+  | 'yt_video'        // 0 - YouTube Video
+  | 'ig_photo'        // 1 - Instagram Photo
+  | 'ig_video'        // 2 - Instagram Video
+  | 'ig_carousel'     // 3 - Instagram Carousel
+  | 'ig_story'        // 4 - Instagram Story
+  | 'tt_video'        // 5 - TikTok Video
+  | 'ig_igtv'         // 6 - Instagram IGTV
+  | 'ig_reel'         // 7 - Instagram Reel
+  | 'other'           // 8 - Otro
+  | 'ig_other'        // 9 - Instagram Otro
+  | 'tt_other';       // 10 - TikTok Otro
+
+export interface CampaignPost {
+  id: number;
+  status: CampaignPostStatus;
+  post_type: CampaignPostType;
+  created_at: string;
+  updated_at: string;
+  account: {
+    id: number;
+    handle: string;
+    platform: {
+      id: number;
+      name: string;
+      short_name: string;
+    };
+  };
+}
+
+export interface CampaignPostsResponse {
+  meta: ApiMeta & {
+    pagination: {
+      current_page: number;
+      page_size: number;
+      total_pages: number;
+      total_count: number;
+      has_next_page: boolean;
+      has_prev_page: boolean;
+    };
+  };
+  data: {
+    campaign_posts: CampaignPost[];
+  };
+}
