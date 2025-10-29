@@ -108,7 +108,7 @@ function App() {
           />
           
           <Route
-            path="/campaigns/:id/instagram-progress"
+            path="/campaigns/:id/posts/:postId/instagram-progress"
             element={
               <ProtectedRoute>
                 <InstagramProgressScreen />
@@ -117,7 +117,7 @@ function App() {
           />
           
           <Route
-            path="/campaigns/:id/tiktok-progress"
+            path="/campaigns/:id/posts/:postId/tiktok-progress"
             element={
               <ProtectedRoute>
                 <TikTokProgressScreen />
@@ -126,7 +126,7 @@ function App() {
           />
           
           <Route
-            path="/campaigns/:id/script-history"
+            path="/campaigns/:id/posts/:postId/script-history"
             element={
               <ProtectedRoute>
                 <ScriptHistoryScreen />
@@ -135,7 +135,7 @@ function App() {
           />
           
           <Route
-            path="/campaigns/:id/add-script"
+            path="/campaigns/:id/posts/:postId/add-script"
             element={
               <ProtectedRoute>
                 <AddScriptScreen />

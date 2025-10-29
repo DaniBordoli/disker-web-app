@@ -11,7 +11,7 @@ type ProgressStatus = 'pending' | 'approved' | 'rejected';
 
 export function InstagramProgressScreen() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id, postId } = useParams();
   
   // Estados para cada sección
   const [scriptStatus, setScriptStatus] = useState<ProgressStatus>('pending');
@@ -23,8 +23,19 @@ export function InstagramProgressScreen() {
     if (scriptSubmitted === 'true') {
       setHasScript(true);
       setScriptStatus('approved');
+    } else {
+      // Asegurar estado inicial limpio
+      setHasScript(false);
+      setScriptStatus('pending');
     }
   }, []);
+
+  // Función para resetear el estado del script (útil para desarrollo)
+  const resetScriptState = () => {
+    localStorage.removeItem('scriptSubmitted');
+    setHasScript(false);
+    setScriptStatus('pending');
+  };
   
   const [videoStatus] = useState<ProgressStatus>('approved');
   
@@ -93,6 +104,14 @@ export function InstagramProgressScreen() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-semibold text-primary-950">Reel 1</h1>
+            {/* Botón temporal para desarrollo - resetear estado del script */}
+            <button
+              onClick={resetScriptState}
+              className="ml-auto px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+              title="Resetear estado del script (para desarrollo)"
+            >
+              Reset Script
+            </button>
           </div>
         </div>
       </header>
@@ -153,7 +172,7 @@ export function InstagramProgressScreen() {
           {hasScript ? (
             <div className="flex gap-3">
               <button
-                onClick={() => navigate(`/campaigns/${id}/script-history`)}
+                onClick={() => navigate(`/campaigns/${id}/posts/${postId}/script-history`)}
                 className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Ver historial
@@ -164,7 +183,7 @@ export function InstagramProgressScreen() {
             </div>
           ) : (
             <button
-              onClick={() => navigate(`/campaigns/${id}/add-script`)}
+              onClick={() => navigate(`/campaigns/${id}/posts/${postId}/add-script`)}
               className="px-6 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
             >
               Agregar guión

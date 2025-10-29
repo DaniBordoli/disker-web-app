@@ -1,7 +1,7 @@
 // Servicios de campañas
 // Copiado del proyecto mobile
 
-import type { CampaignsResponse, CampaignDetailResponse } from '../types/api';
+import type { CampaignsResponse, CampaignDetailResponse, CampaignPostsResponse } from '../types/api';
 import { ApiError } from '../types/api';
 import {
   devLog,
@@ -44,6 +44,35 @@ export async function getCampaignDetail(campaignId: number): Promise<CampaignDet
 
   const data = await parseJson<CampaignDetailResponse>(resp);
   devLog('[getCampaignDetail] raw response', data);
+
+  if (!resp.ok) {
+    const message = data?.meta?.message || `Request failed with status ${resp.status}`;
+    throw new ApiError(message, resp.status, data);
+  }
+
+  return data;
+}
+
+export interface GetCampaignPostsParams {
+  page?: number;
+  per_page?: number;
+}
+
+export async function getCampaignPosts(
+  campaignId: string | number,
+  params: GetCampaignPostsParams = {}
+): Promise<CampaignPostsResponse> {
+  const { page = 1, per_page = 10 } = params;
+  const url = buildUrl(`/api/v1/talents/campaigns/${campaignId}/campaign_posts?page=${page}&per_page=${per_page}`);
+  devLog('[getCampaignPosts] request', { url, campaignId, params });
+  
+  const resp = await fetchWithAuthRetry(url, {
+    method: 'GET',
+    headers: { ...defaultHeaders },
+  });
+
+  const data = await parseJson<CampaignPostsResponse>(resp);
+  devLog('[getCampaignPosts] raw response', data);
 
   if (!resp.ok) {
     const message = data?.meta?.message || `Request failed with status ${resp.status}`;
