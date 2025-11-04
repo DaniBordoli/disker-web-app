@@ -211,11 +211,14 @@ export interface CampaignDetailResponse {
 }
 
 // Script Types
+export type ScriptStatus = 'pending' | 'approved' | 'rejected' | 'approval_client' | 'approval_agency';
+
 export interface Script {
   id: number;
   title: string;
   content: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: ScriptStatus;
+  feedback?: string;  // Solo cuando status = 'rejected'
   created_at: string;
   updated_at: string;
 }
@@ -228,6 +231,13 @@ export interface CreateScriptRequest {
 }
 
 export interface CreateScriptResponse {
+  meta: ApiMeta;
+  data: {
+    script: Script;
+  };
+}
+
+export interface ScriptDetailResponse {
   meta: ApiMeta;
   data: {
     script: Script;
@@ -260,6 +270,37 @@ export type CampaignPostType =
   | 'ig_other'        // 9 - Instagram Otro
   | 'tt_other';       // 10 - TikTok Otro
 
+export interface PublishedPost {
+  id: number;
+  account_id: number;
+  permalink: string;
+  post_type: string;
+  uid: string;
+  description: string;
+  thumbnail: string;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+  data: {
+    tags?: string[];
+    duration?: number;
+    music?: {
+      authorName: string;
+      title: string;
+      playUrl: string;
+      coverThumb: string;
+      coverMedium: string;
+      coverLarge: string;
+      duration: number;
+      id: number;
+      original: boolean;
+    };
+  };
+  current_metric_id: number | null;
+  song_type: string | null;
+  song_id: number | null;
+}
+
 export interface CampaignPost {
   id: number;
   status: CampaignPostStatus;
@@ -275,6 +316,9 @@ export interface CampaignPost {
       short_name: string;
     };
   };
+  drafts: Draft[];
+  scripts: Script[];
+  post: PublishedPost | null;
 }
 
 export interface CampaignPostsResponse {
@@ -290,5 +334,45 @@ export interface CampaignPostsResponse {
   };
   data: {
     campaign_posts: CampaignPost[];
+  };
+}
+
+// Draft Types
+export type DraftStatus = 
+  | 'approval_client'   // Esperando aprobación del cliente
+  | 'approval_agency'   // Esperando aprobación de agencia (no usado por ahora)
+  | 'approved'          // Aprobado
+  | 'rejected';         // Rechazado
+
+export interface Draft {
+  id: number;
+  title: string;
+  url: string | null;
+  status: DraftStatus;
+  file_url: string | null;
+  feedback?: string;  // Solo cuando status = 'rejected'
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDraftRequest {
+  draft: {
+    title: string;
+    url?: string;
+    file?: File;
+  };
+}
+
+export interface CreateDraftResponse {
+  meta: ApiMeta;
+  data: {
+    draft: Draft;
+  };
+}
+
+export interface DraftsListResponse {
+  meta: ApiMeta;
+  data: {
+    drafts: Draft[];
   };
 }

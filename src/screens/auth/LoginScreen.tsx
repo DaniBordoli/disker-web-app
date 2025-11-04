@@ -19,7 +19,7 @@ export function LoginScreen() {
 
     try {
       await loginSession({ email, password });
-      navigate('/');
+      navigate('/my-campaigns');
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {

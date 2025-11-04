@@ -1,11 +1,16 @@
 // Pantalla de Progreso de Instagram
 // Adaptada del mobile - Mock sin backend
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Link as LinkIcon, Video, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Link as LinkIcon, Video, Upload, Loader } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { BottomNavBar } from '../components/navigation/BottomNavBar';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { createDraft } from '../services/drafts';
+import { getCampaignPosts } from '../services/campaigns';
+import type { DraftStatus, CreateDraftRequest } from '../types/api';
+import { ApiError } from '../types/api';
 
 type ProgressStatus = 'pending' | 'approved' | 'rejected';
 
@@ -14,41 +19,21 @@ export function InstagramProgressScreen() {
   const { id, postId } = useParams();
   
   // Estados para cada sección
-  const [scriptStatus, setScriptStatus] = useState<ProgressStatus>('pending');
-  const [hasScript, setHasScript] = useState(false);
   
-  // Verificar si el guión fue enviado
-  useEffect(() => {
-    const scriptSubmitted = localStorage.getItem('scriptSubmitted');
-    if (scriptSubmitted === 'true') {
-      setHasScript(true);
-      setScriptStatus('approved');
-    } else {
-      // Asegurar estado inicial limpio
-      setHasScript(false);
-      setScriptStatus('pending');
-    }
-  }, []);
-
-  // Función para resetear el estado del script (útil para desarrollo)
-  const resetScriptState = () => {
-    localStorage.removeItem('scriptSubmitted');
-    setHasScript(false);
-    setScriptStatus('pending');
-  };
-  
-  const [videoStatus] = useState<ProgressStatus>('approved');
-  
-  const [videoHDStatus, setVideoHDStatus] = useState<ProgressStatus>('pending');
-  const [videoHDUploaded, setVideoHDUploaded] = useState(false);
+  // Estados para drafts
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftUrl, setDraftUrl] = useState('');
+  const [draftFile, setDraftFile] = useState<File | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{title?: string[], url?: string[], file?: string[]}>({});
   
   const [linkStatus, setLinkStatus] = useState<ProgressStatus>('pending');
   const [linkUploaded, setLinkUploaded] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   
-  const [metricsStatus, setMetricsStatus] = useState<ProgressStatus>('pending');
-  const [metricsUploaded, setMetricsUploaded] = useState(false);
 
   const getStatusBadge = (status: ProgressStatus) => {
     const styles = {
@@ -68,9 +53,99 @@ export function InstagramProgressScreen() {
     );
   };
 
-  const handleUploadVideoHD = () => {
-    setVideoHDUploaded(true);
-    setVideoHDStatus('approved');
+  // Obtener campaign posts (incluye drafts y scripts)
+  const { data: campaignPostsData, refetch: refetchCampaignPosts } = useQuery({
+    queryKey: ['campaignPosts', id],
+    queryFn: () => getCampaignPosts(id!, { page: 1, per_page: 100 }),
+    enabled: !!id,
+  });
+
+  // Encontrar el campaign post actual por postId
+  const currentCampaignPost = campaignPostsData?.data.campaign_posts.find(
+    (post) => post.id === Number(postId)
+  );
+
+  // Obtener último draft y último script
+  const latestDraft = currentCampaignPost?.drafts[currentCampaignPost.drafts.length - 1];
+  const latestScript = currentCampaignPost?.scripts[currentCampaignPost.scripts.length - 1];
+  
+  const canAddDraft = !latestDraft || 
+    (latestDraft.status !== 'approval_client' && latestDraft.status !== 'approved');
+
+  // Helper para obtener badge de draft
+  const getDraftStatusBadge = (status: DraftStatus) => {
+    const config = {
+      approval_client: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'En revisión' },
+      approval_agency: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'En revisión (agencia)' },
+      approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Aprobado' },
+      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rechazado' },
+    };
+    
+    const { bg, text, label } = config[status];
+    
+    return (
+      <span className={`${bg} px-3 py-1 rounded text-sm ${text} font-medium`}>
+        {label}
+      </span>
+    );
+  };
+
+  // Manejar envío de draft
+  const handleSubmitDraft = async () => {
+    if (!postId) return;
+    
+    // Reset errors
+    setDraftError(null);
+    setFieldErrors({});
+    
+    // Validación básica
+    if (!draftTitle.trim()) {
+      setFieldErrors({ title: ["can't be blank"] });
+      return;
+    }
+    
+    if (!draftUrl.trim() && !draftFile) {
+      setDraftError('Debes proporcionar un link o subir un archivo');
+      return;
+    }
+    
+    setIsSubmittingDraft(true);
+    
+    try {
+      const payload: CreateDraftRequest = {
+        draft: {
+          title: draftTitle.trim(),
+          url: draftUrl.trim() || undefined,
+          file: draftFile || undefined,
+        }
+      };
+      
+      await createDraft(postId, payload);
+      
+      // Refrescar campaign posts para obtener drafts actualizados
+      refetchCampaignPosts();
+      
+      // Limpiar y cerrar modal
+      setDraftTitle('');
+      setDraftUrl('');
+      setDraftFile(null);
+      setShowDraftModal(false);
+      
+    } catch (err) {
+      console.error('Error creating draft:', err);
+      
+      if (err instanceof ApiError) {
+        setDraftError(err.message);
+        
+        if (err.body?.errors) {
+          setFieldErrors(err.body.errors);
+        }
+      } else {
+        setDraftError('Error al crear el draft');
+      }
+    } finally {
+      setIsSubmittingDraft(false);
+    }
   };
 
   const handleSubmitLink = () => {
@@ -81,14 +156,14 @@ export function InstagramProgressScreen() {
     }
   };
 
-  const handleUploadMetrics = () => {
-    setMetricsUploaded(true);
-    setMetricsStatus('approved');
-  };
 
-  const allStatuses = [scriptStatus, videoStatus, videoHDStatus, linkStatus, metricsStatus];
-  const completedCount = allStatuses.filter(s => s === 'approved').length;
-  const totalCount = allStatuses.length;
+  // Calcular progreso basado en datos reales (sin métricas)
+  const isScriptApproved = latestScript?.status === 'approved';
+  const isDraftApproved = latestDraft?.status === 'approved';
+  const isLinkApproved = linkStatus === 'approved';
+  
+  const completedCount = (isScriptApproved ? 1 : 0) + (isDraftApproved ? 1 : 0) + (isLinkApproved ? 1 : 0);
+  const totalCount = 3; // Guión, Video (draft), Link
   const progress = (completedCount / totalCount) * 100;
 
   return (
@@ -104,14 +179,6 @@ export function InstagramProgressScreen() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-semibold text-primary-950">Reel 1</h1>
-            {/* Botón temporal para desarrollo - resetear estado del script */}
-            <button
-              onClick={resetScriptState}
-              className="ml-auto px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-              title="Resetear estado del script (para desarrollo)"
-            >
-              Reset Script
-            </button>
           </div>
         </div>
       </header>
@@ -166,10 +233,20 @@ export function InstagramProgressScreen() {
               </div>
               <h3 className="font-semibold text-primary-950">Guión</h3>
             </div>
-            {hasScript && getStatusBadge(scriptStatus)}
+            {latestScript && (
+              <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                latestScript.status === 'approved' ? 'bg-green-100 text-green-800' :
+                latestScript.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                'bg-orange-100 text-orange-800'
+              }`}>
+                {latestScript.status === 'approved' ? 'Aprobado' :
+                 latestScript.status === 'rejected' ? 'Rechazado' :
+                 'En revisión'}
+              </span>
+            )}
           </div>
           
-          {hasScript ? (
+          {latestScript ? (
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(`/campaigns/${id}/posts/${postId}/script-history`)}
@@ -177,7 +254,10 @@ export function InstagramProgressScreen() {
               >
                 Ver historial
               </button>
-              <button className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <button 
+                onClick={() => navigate(`/campaigns/${id}/posts/${postId}/scripts/${latestScript.id}`)}
+                className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 Ver guión
               </button>
             </div>
@@ -191,48 +271,62 @@ export function InstagramProgressScreen() {
           )}
         </div>
 
-        {/* Video */}
-        <div className="border border-gray-200 rounded-lg p-4 bg-white">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Video className="w-5 h-5 text-primary-950" />
-              <h3 className="font-semibold text-primary-950">Video</h3>
-            </div>
-            {getStatusBadge(videoStatus)}
-          </div>
-          <p className="text-sm text-green-700">✓ Video aprobado</p>
-        </div>
-
-        {/* Video HD */}
+        {/* Video (Draft) */}
         <div className={`border-2 rounded-lg p-4 ${
-          videoHDUploaded ? 'border-gray-200 bg-white' : 'border-primary-950 bg-white shadow-lg'
+          latestDraft ? 'border-gray-200 bg-white' : 'border-primary-950 bg-white shadow-lg'
         }`}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <Video className="w-5 h-5 text-primary-950" />
-              <h3 className="font-semibold text-primary-950">Video en HD</h3>
+              <h3 className="font-semibold text-primary-950">Video</h3>
             </div>
-            {videoHDUploaded && getStatusBadge(videoHDStatus)}
+            {latestDraft && getDraftStatusBadge(latestDraft.status)}
           </div>
           
-          {videoHDUploaded ? (
+          {latestDraft ? (
             <>
-              <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3 mb-3">
-                <div className="w-12 h-12 bg-gray-300 rounded flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3">
+                  <div className="w-12 h-12 bg-gray-300 rounded flex items-center justify-center">
+                    {latestDraft.file_url ? (
+                      <Video className="w-6 h-6 text-gray-600" />
+                    ) : (
+                      <LinkIcon className="w-6 h-6 text-gray-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-primary-950">{latestDraft.title}</p>
+                    <button
+                      onClick={() => navigate(`/campaigns/${id}/posts/${postId}/drafts/${latestDraft.id}`)}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-primary-950">Video_HD.mp4</p>
-                  <p className="text-sm text-gray-500">8,7 MB</p>
-                </div>
+                
+                {/* Feedback si está rechazado */}
+                {latestDraft.status === 'rejected' && latestDraft.feedback && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-red-800 mb-1">Feedback:</p>
+                    <p className="text-sm text-red-700">{latestDraft.feedback}</p>
+                  </div>
+                )}
+                
+                {/* Botón para agregar nuevo draft (solo si puede) */}
+                {canAddDraft && (
+                  <button 
+                    onClick={() => setShowDraftModal(true)}
+                    className="text-primary-950 underline hover:text-primary-700"
+                  >
+                    Subir nuevo video
+                  </button>
+                )}
               </div>
-              <button className="text-primary-950 underline hover:text-primary-700">
-                Cambiar video
-              </button>
             </>
           ) : (
             <button
-              onClick={handleUploadVideoHD}
+              onClick={() => setShowDraftModal(true)}
               className="text-primary-950 underline hover:text-primary-700 font-medium"
             >
               Subir video
@@ -276,7 +370,7 @@ export function InstagramProgressScreen() {
         </div>
 
         {/* Métricas */}
-        <div className={`border-2 rounded-lg p-4 ${
+        {/* <div className={`border-2 rounded-lg p-4 ${
           metricsUploaded ? 'border-gray-200 bg-white' : 'border-primary-950 bg-white shadow-lg'
         }`}>
           <div className="flex items-start justify-between mb-3">
@@ -310,7 +404,7 @@ export function InstagramProgressScreen() {
               Subir métricas
             </button>
           )}
-        </div>
+        </div> */}
 
         {/* Mensaje de finalización */}
         {completedCount === totalCount && (
@@ -325,6 +419,112 @@ export function InstagramProgressScreen() {
           </div>
         )}
       </main>
+
+      {/* Modal para subir draft */}
+      <Modal
+        isOpen={showDraftModal}
+        onClose={() => setShowDraftModal(false)}
+        title="Subir Video"
+      >
+        <div className="space-y-4">
+          {/* Título */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Título *
+            </label>
+            <input
+              type="text"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              className={`w-full p-3 border rounded-lg ${
+                fieldErrors.title ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Ej: Draft Instagram Reel 1"
+            />
+            {fieldErrors.title && (
+              <p className="text-sm text-red-600 mt-1">{fieldErrors.title[0]}</p>
+            )}
+          </div>
+          
+          {/* Opción: Subir archivo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subir video
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => setDraftFile(e.target.files?.[0] || null)}
+                className="w-full text-sm"
+              />
+              {draftFile && (
+                <Upload className="w-5 h-5 text-green-600" />
+              )}
+            </div>
+            {fieldErrors.file && (
+              <p className="text-sm text-red-600 mt-1">{fieldErrors.file[0]}</p>
+            )}
+          </div>
+          
+          <div className="text-center text-gray-500 text-sm">O</div>
+          
+          {/* Opción: URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Link de la publicación
+            </label>
+            <input
+              type="url"
+              value={draftUrl}
+              onChange={(e) => setDraftUrl(e.target.value)}
+              className={`w-full p-3 border rounded-lg ${
+                fieldErrors.url ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="https://instagram.com/p/..."
+            />
+            {fieldErrors.url && (
+              <p className="text-sm text-red-600 mt-1">{fieldErrors.url[0]}</p>
+            )}
+          </div>
+          
+          {/* Error general */}
+          {draftError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{draftError}</p>
+            </div>
+          )}
+          
+          {/* Botones */}
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={() => {
+                setShowDraftModal(false);
+                setDraftError(null);
+                setFieldErrors({});
+              }}
+              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+              disabled={isSubmittingDraft}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmitDraft}
+              disabled={isSubmittingDraft}
+              className="flex-1 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmittingDraft ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                'Subir'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal para agregar link */}
       <Modal
