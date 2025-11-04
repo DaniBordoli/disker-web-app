@@ -7,7 +7,7 @@ import { getScript } from '../services/scripts';
 
 export function ViewScriptScreen() {
   const navigate = useNavigate();
-  const { id, postId, scriptId } = useParams();
+  const { postId, scriptId } = useParams();
 
   // Obtener el script
   const { data, isLoading, error } = useQuery({
