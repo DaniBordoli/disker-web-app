@@ -22,6 +22,8 @@ import { InstagramProgressScreen } from './screens/InstagramProgressScreen';
 import { TikTokProgressScreen } from './screens/TikTokProgressScreen';
 import { ScriptHistoryScreen } from './screens/ScriptHistoryScreen';
 import { AddScriptScreen } from './screens/AddScriptScreen';
+import { ViewScriptScreen } from './screens/ViewScriptScreen';
+import { ViewDraftScreen } from './screens/ViewDraftScreen';
 import { ProposalDetailsScreen } from './screens/ProposalDetailsScreen';
 import { AudienceStatsScreen } from './screens/AudienceStatsScreen';
 
@@ -139,6 +141,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <AddScriptScreen />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/campaigns/:id/posts/:postId/scripts/:scriptId"
+            element={
+              <ProtectedRoute>
+                <ViewScriptScreen />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/campaigns/:id/posts/:postId/drafts/:draftId"
+            element={
+              <ProtectedRoute>
+                <ViewDraftScreen />
               </ProtectedRoute>
             }
           />
